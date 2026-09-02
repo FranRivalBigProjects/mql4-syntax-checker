@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MQL4 / MT4 Syntax Checker</title>
+<meta name="description" content="Paste MQL4 code and run a basic syntax check for unbalanced braces, parentheses, and missing semicolons before compiling in MetaEditor.">
+<meta name="google-site-verification" content="REPLACE_WITH_YOUR_VERIFICATION_CODE">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0f12;color:#d7dbe0;font-family:'JetBrains Mono',monospace;line-height:1.6;padding:24px 16px 60px}
+.wrap{max-width:780px;margin:0 auto}
+h1{font-size:22px;color:#7ee787;margin-bottom:6px}
+.subtitle{color:#8b949e;font-size:14px;margin-bottom:24px}
+.panel{background:#14171a;border:1px solid #2a2f36;border-radius:6px;padding:18px;margin-bottom:20px}
+.panel h2{font-size:15px;color:#58a6ff;margin-bottom:12px}
+textarea{width:100%;min-height:220px;background:#0a0c0e;border:1px solid #2a2f36;border-radius:4px;color:#d7dbe0;font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px;resize:vertical}
+.btn{background:#238636;color:#fff;border:none;border-radius:4px;padding:10px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;cursor:pointer;margin-top:12px}
+.status{font-size:13px;margin-top:10px}
+.status.ok{color:#7ee787}
+.status.bad{color:#f85149}
+.issue{font-size:12px;color:#f85149;padding:4px 0;border-bottom:1px solid #1c2026}
+article{font-size:13px;color:#a9b1bb;margin-top:26px}
+article h2{font-size:15px;color:#58a6ff;margin:16px 0 8px}
+article p{margin-bottom:8px}
+footer{text-align:center;font-size:11px;color:#4a5158;margin-top:34px}
+</style></head>
+<body><div class="wrap">
+<h1>MQL4 / MT4 Syntax Checker</h1>
+<p class="subtitle">A basic structural check for common copy-paste mistakes before you compile in MetaEditor.</p>
+<div class="panel">
+<textarea id="codeInput" placeholder="void OnTick()
+{
+    if(Bid > 1.2000)
+    {
+        Print(&quot;Price above threshold&quot;);
+    }
+}"></textarea>
+<button class="btn" id="checkBtn">Check Syntax</button>
+<div class="status" id="statusEl"></div>
+<div id="issuesList"></div>
+</div>
+<article><h2>Limitations</h2><p>This checks structural balance only, not variable declarations, function signatures, or MQL4-specific API usage. Always run the real MetaEditor compiler for a definitive check; this tool just catches obvious mistakes before you get there.</p></article>
+<footer>Client-side tool. Nothing you paste here is stored or sent anywhere.</footer>
+</div>
+<script>
+function check(){
+  var code=document.getElementById('codeInput').value;
+  var issues=[];
+
+  var openBraces=(code.match(/\{/g)||[]).length;
+  var closeBraces=(code.match(/\}/g)||[]).length;
+  if(openBraces!==closeBraces) issues.push('Unbalanced curly braces: '+openBraces+' open vs '+closeBraces+' close');
+
+  var openParens=(code.match(/\(/g)||[]).length;
+  var closeParens=(code.match(/\)/g)||[]).length;
+  if(openParens!==closeParens) issues.push('Unbalanced parentheses: '+openParens+' open vs '+closeParens+' close');
+
+  var doubleQuotes=(code.match(/"/g)||[]).length;
+  if(doubleQuotes%2!==0) issues.push('Odd number of double quotes, a string may be unclosed');
+
+  var lines=code.split('\n');
+  var missingSemis=0;
+  var i;
+  for(i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    if(!line) continue;
+    if(line.charAt(0)==='/'||line.charAt(0)==='*') continue;
+    var lastChar=line.charAt(line.length-1);
+    var endsBlock = lastChar==='{' || lastChar==='}' || lastChar===':' || line.indexOf('//')===0;
+    var isDirective = line.charAt(0)==='#';
+    var looksLikeStatement = /[a-zA-Z0-9_\)\]]\s*$/.test(line) && lastChar!==';' && !endsBlock && !isDirective;
+    if(looksLikeStatement && line.indexOf('if')!==0 && line.indexOf('for')!==0 && line.indexOf('while')!==0 && line.indexOf('else')!==0){
+      missingSemis++;
+    }
+  }
+  if(missingSemis>0) issues.push('Approximately '+missingSemis+' line(s) may be missing a semicolon (heuristic check, verify manually)');
+
+  var statusEl=document.getElementById('statusEl');
+  var issuesList=document.getElementById('issuesList');
+
+  if(issues.length===0){
+    statusEl.innerHTML='No structural issues found.';
+    statusEl.className='status ok';
+    issuesList.innerHTML='';
+  } else {
+    statusEl.innerHTML=issues.length+' potential issue(s) found:';
+    statusEl.className='status bad';
+    var html='';
+    for(i=0;i<issues.length;i++){ html+='<div class="issue">'+issues[i]+'</div>'; }
+    issuesList.innerHTML=html;
+  }
+}
+document.getElementById('checkBtn').addEventListener('click',check);
+</script>
+</body></html>
